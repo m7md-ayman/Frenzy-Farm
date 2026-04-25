@@ -94,9 +94,8 @@ void Wolf::moveStep()
 	window* pWind = pGame->getWind();
 
 	// erase wolf from old position
-	pWind->SetPen(config.bkGrndColor, 1);
-	pWind->SetBrush(config.bkGrndColor);
-	pWind->DrawRectangle(RefPoint.x - 15, RefPoint.y - 15, RefPoint.x + 70, RefPoint.y + 60);
+	pWind->DrawImage("images\\background.jpeg", 0, config.toolBarHeight * 2,
+		config.windWidth, config.windHeight);
 
 	// move to a new random position
 	int r1 = rand() % 20 - 10;
