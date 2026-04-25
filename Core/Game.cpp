@@ -12,7 +12,8 @@ Game::Game()
 	createToolbar();
 	createBudgetbar();
 	//3 - create and draw the backgroundPlayingArea
-
+	pWind->DrawImage("images\\background.jpeg", 0, config.toolBarHeight * 2,
+		config.windWidth, config.windHeight);
 
 	//4- Create the Plane
 	//TODO: Add code to create and draw the Plane
