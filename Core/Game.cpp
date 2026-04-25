@@ -29,6 +29,12 @@ Game::Game()
 	wolfPoint.y = rand() % (range_max_y - range_min_y) + range_min_y;
 	myWolf = new Wolf(this, wolfPoint, 50, 40);
 	myWolf->draw();
+	// Create and draw the chicken
+	point chickenPoint;
+	chickenPoint.x = 300;
+	chickenPoint.y = 250;
+	myChicken = new Chicken(this, chickenPoint, 55, 60);
+	myChicken->draw();
 	//TODO: Add code to create and draw enemies in random places
 
 	//7- Create and clear the status bar
@@ -97,7 +103,6 @@ void Game::createBudgetbar()
 	gameBudgetbar = new Budgetbar(this, budgetbarUpperleft, 0, config.toolBarHeight);
 	gameBudgetbar->draw();
 }
-
 
 void Game::clearBudget() const
 {

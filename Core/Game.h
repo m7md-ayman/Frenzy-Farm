@@ -14,6 +14,7 @@ private:
 public:
 	int budget = 2000;
 	Wolf* myWolf;
+	Chicken* myChicken;
 	Game();
 	~Game();
 
