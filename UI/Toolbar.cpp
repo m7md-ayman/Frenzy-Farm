@@ -16,72 +16,60 @@ void ToolbarIcon::draw() const
     pWind->DrawImage(image_path, RefPoint.x, RefPoint.y, width, height);
 }
 
-// --- RestartIcon ---
+
 RestartIcon::RestartIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
     : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void RestartIcon::onClick()
 {
-    // TODO: add restart logic
     cout << "Restart clicked" << endl;
 }
 
-// --- PauseIcon ---
 PauseIcon::PauseIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
     : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void PauseIcon::onClick()
 {
-    // TODO: add pause logic
     cout << "Pause clicked" << endl;
 }
 
-// --- ResumeIcon ---
 ResumeIcon::ResumeIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
     : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void ResumeIcon::onClick()
 {
-    // TODO: add resume logic
     cout << "Resume clicked" << endl;
 }
 
-// --- SaveIcon ---
 SaveIcon::SaveIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
     : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void SaveIcon::onClick()
 {
-    // TODO: add save logic
     cout << "Save clicked" << endl;
 }
 
-// --- LoadToolbarIcon ---
 LoadToolbarIcon::LoadToolbarIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
     : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void LoadToolbarIcon::onClick()
 {
-    // TODO: add load logic
     cout << "Load clicked" << endl;
 }
 
-// --- ExitIcon ---
 ExitIcon::ExitIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
     : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void ExitIcon::onClick()
 {
-    // TODO: add cleanup logic
 }
 
-// --- Toolbar ---
 Toolbar::Toolbar(Game* r_pGame, point r_point, int r_width, int r_height)
     : Drawable(r_pGame, r_point, r_width, r_height)
 {

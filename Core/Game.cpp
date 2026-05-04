@@ -47,7 +47,7 @@ Game::~Game()
 
 clicktype Game::getMouseClick(int& x, int& y) const
 {
-	return pWind->WaitMouseClick(x, y);	//Wait for mouse click
+	return pWind->WaitMouseClick(x, y);
 
 }
 
@@ -60,11 +60,11 @@ string Game::getSrting() const
 	while (1)
 	{
 		ktype = pWind->WaitKeyPress(Key);
-		if (ktype == ESCAPE)	//ESCAPE key is pressed
-			return "";	//returns nothing as user has cancelled label
-		if (Key == 13)	//ENTER key is pressed
+		if (ktype == ESCAPE)
+			return "";
+		if (Key == 13)
 			return Label;
-		if (Key == 8)	//BackSpace is pressed
+		if (Key == 8)
 			if (Label.size() > 0)
 				Label.resize(Label.size() - 1);
 			else
@@ -106,7 +106,6 @@ void Game::createBudgetbar()
 
 void Game::clearBudget() const
 {
-	//Clear Status bar by drawing a filled rectangle
 	pWind->SetPen(config.bkGrndColor, 1);
 	pWind->SetBrush(config.bkGrndColor);
 	pWind->DrawRectangle(config.windWidth - 500, config.toolBarHeight, config.windWidth, 2*config.toolBarHeight);
@@ -114,7 +113,7 @@ void Game::clearBudget() const
 
 void Game::printBudget(string msg) const
 {
-	clearBudget();	//First clear the status bar
+	clearBudget();
 
 	pWind->SetPen(config.penColor, 50);
 	pWind->SetFont(24, BOLD, BY_NAME, "Arial");
@@ -124,7 +123,6 @@ void Game::printBudget(string msg) const
 
 void Game::clearStatusBar() const
 {
-	//Clear Status bar by drawing a filled rectangle
 	pWind->SetPen(config.statusBarColor, 1);
 	pWind->SetBrush(config.statusBarColor);
 	pWind->DrawRectangle(0, config.windHeight - config.statusBarHeight, config.windWidth, config.windHeight);
@@ -132,7 +130,7 @@ void Game::clearStatusBar() const
 
 void Game::printMessage(string msg) const
 {
-	clearStatusBar();	//First clear the status bar
+	clearStatusBar();
 
 	pWind->SetPen(config.penColor, 50);
 	pWind->SetFont(24, BOLD, BY_NAME, "Arial");
@@ -147,11 +145,9 @@ window* Game::getWind() const
 
 void Game::go() const
 {
-	//This function reads the position where the user clicks to determine the desired operation
 	int x, y;
 	bool isExit = false;
 
-	//Change the title
 	pWind->ChangeTitle("- - - - - - - - - - Farm Frenzy (CIE101-project) - - - - - - - - - -");
 
 	do
@@ -159,11 +155,8 @@ void Game::go() const
 		printMessage("Ready...");
 		string budget_string = "BUDGET = $" + to_string(budget);
 		printBudget(budget_string);
-		//printBudget("BUDGET = $1000");
-		getMouseClick(x, y);	//Get the coordinates of the user click
-		//if (gameMode == MODE_DSIGN)		//Game is in the Desgin mode
-		//{
-			//[1] If user clicks on the Toolbar
+		getMouseClick(x, y);
+
 		if (y >= 0 && y < config.toolBarHeight)
 		{
 			isExit = gameToolbar->handleClick(x, y);
@@ -172,7 +165,6 @@ void Game::go() const
 		{
 			isExit = gameBudgetbar->handleClick(x, y);
 		}
-		//}
 		myWolf->moveStep();
 	} while (!isExit);
 }

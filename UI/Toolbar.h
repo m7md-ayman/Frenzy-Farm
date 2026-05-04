@@ -1,7 +1,6 @@
 #pragma once
 #include "../Core/Drawable.h"
 
-// Base class for all toolbar icons
 class ToolbarIcon : public Drawable
 {
 private:
@@ -63,7 +62,7 @@ enum ICONS
     ICON_LOAD,
     ICON_EXIT,
 
-    ICON_COUNT   // must be last
+    ICON_COUNT 
 };
 
 class Toolbar : public Drawable

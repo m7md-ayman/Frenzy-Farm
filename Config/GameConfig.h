@@ -22,6 +22,8 @@ struct  //contains all game configurations (MAY be loaded from a configuration f
 	int penWidth = 3;			//width of the pen that draws shapes
 
 	int	iconWidth = 70;			//Width of each icon in toolbar 
+	int wolfCounter = 0;
+	int chickenCounter = 0;
 } config;
 
 

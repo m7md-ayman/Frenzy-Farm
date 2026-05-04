@@ -15,7 +15,6 @@ Animal::Animal(Game* r_pGame, point r_point, int r_width, int r_height, string i
 
 void Animal::draw() const
 {
-	//draw image of this object
 	window* pWind = pGame->getWind();
 	pWind->DrawImage(image_path, RefPoint.x, RefPoint.y, width, height);
 }
@@ -39,13 +38,14 @@ Cow::Cow(Game* r_pGame, point r_point, int r_width, int r_height, string img_pat
 
 void Cow::moveStep()
 {
-	//TO DO: add code for cleanup and game exit here
 	cout << "Icon Cow Clicked" << endl;
 
 }
 
 Wolf::Wolf(Game* r_pGame, point r_point, int r_width, int r_height) : Animal(r_pGame, r_point, r_width, r_height, "")
-{}
+{
+	config.wolfCounter++;
+}
 
 void Wolf::draw() const
 {
@@ -53,31 +53,24 @@ void Wolf::draw() const
 	int x = RefPoint.x;
 	int y = RefPoint.y;
 
-	// body
 	pWind->SetPen(GRAY, 2);
 	pWind->SetBrush(GRAY);
 	pWind->DrawRectangle(x, y + 18, x + 44, y + 38);
 
-	// square head
 	pWind->DrawRectangle(x + 28, y + 2, x + 52, y + 20);
 
-	// left ear
 	pWind->SetPen(DARKGRAY, 2);
 	pWind->SetBrush(DARKGRAY);
 	pWind->DrawRectangle(x + 29, y - 8, x + 35, y + 4);
 
-	// right ear
 	pWind->DrawRectangle(x + 44, y - 8, x + 50, y + 4);
 
-	// left eye
 	pWind->SetPen(RED, 2);
 	pWind->SetBrush(RED);
 	pWind->DrawRectangle(x + 31, y + 6, x + 36, y + 11);
 
-	// right eye
 	pWind->DrawRectangle(x + 43, y + 6, x + 48, y + 11);
 
-	// four legs
 	pWind->SetPen(DARKGRAY, 2);
 	pWind->SetBrush(DARKGRAY);
 	pWind->DrawRectangle(x + 4, y + 37, x + 11, y + 52);
@@ -85,31 +78,31 @@ void Wolf::draw() const
 	pWind->DrawRectangle(x + 26, y + 37, x + 33, y + 52);
 	pWind->DrawRectangle(x + 35, y + 37, x + 42, y + 52);
 
-	// tail
 	pWind->DrawRectangle(x - 10, y + 19, x + 2, y + 26);
+
+	pWind->SetPen(WHITE, 1);
+	pWind->DrawString(x + 15, y - 15, to_string(config.wolfCounter));
 }
 
 void Wolf::moveStep()
 {
 	window* pWind = pGame->getWind();
 
-	// erase wolf from old position
 	pWind->DrawImage("images\\background.jpeg", 0, config.toolBarHeight * 2,
 		config.windWidth, config.windHeight);
 
-	// move to a new random position
 	int r1 = rand() % 20 - 10;
 	int r2 = rand() % 20 - 10;
 	RefPoint.x = RefPoint.x + r1;
 	RefPoint.y = RefPoint.y + r2;
 
-	// draw wolf at new position
 	draw();
 }
 
 Chicken::Chicken(Game* r_pGame, point r_point, int r_width, int r_height)
 	: Animal(r_pGame, r_point, r_width, r_height, "")
 {
+	config.chickenCounter++;
 }
 
 void Chicken::draw() const
@@ -118,46 +111,41 @@ void Chicken::draw() const
 	int x = RefPoint.x;
 	int y = RefPoint.y;
 
-	// body
 	pWind->SetPen(ORANGE, 2);
 	pWind->SetBrush(ORANGE);
 	pWind->DrawRectangle(x + 5, y + 20, x + 40, y + 45);
 
-	// head
 	pWind->SetPen(ORANGE, 2);
 	pWind->SetBrush(ORANGE);
 	pWind->DrawRectangle(x + 25, y + 5, x + 45, y + 22);
 
-	// red
 	pWind->SetPen(RED, 2);
 	pWind->SetBrush(RED);
 	pWind->DrawRectangle(x + 28, y - 5, x + 34, y + 7);
 	pWind->DrawRectangle(x + 34, y - 2, x + 40, y + 7);
 
-	// beak
 	pWind->SetPen(YELLOW, 2);
 	pWind->SetBrush(YELLOW);
 	pWind->DrawRectangle(x + 44, y + 12, x + 52, y + 17);
 
-	// eye
 	pWind->SetPen(BLACK, 2);
 	pWind->SetBrush(BLACK);
 	pWind->DrawRectangle(x + 37, y + 8, x + 42, y + 13);
 
-	// wing
 	pWind->SetPen(BROWN, 2);
 	pWind->SetBrush(BROWN);
 	pWind->DrawRectangle(x + 8, y + 24, x + 28, y + 38);
 
-	// two legs
 	pWind->SetPen(YELLOW, 2);
 	pWind->SetBrush(YELLOW);
 	pWind->DrawRectangle(x + 12, y + 44, x + 18, y + 56);
 	pWind->DrawRectangle(x + 25, y + 44, x + 31, y + 56);
 
-	// feet
 	pWind->DrawRectangle(x + 8, y + 55, x + 20, y + 59);
 	pWind->DrawRectangle(x + 22, y + 55, x + 34, y + 59);
+
+	pWind->SetPen(WHITE, 1);
+	pWind->DrawString(x + 5, y - 15, to_string(config.chickenCounter));
 }
 
 void Chicken::moveStep()
