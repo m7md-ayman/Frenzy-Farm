@@ -109,6 +109,11 @@ void Budgetbar::draw() const
 
 	window* pWind = pGame->getWind();
 
+	pWind->SetPen(config.bkGrndColor, 1);
+	pWind->SetBrush(config.bkGrndColor);
+	pWind->DrawRectangle(ANIMAL_COUNT * config.iconWidth, config.toolBarHeight,
+		pWind->GetWidth(), 2 * config.toolBarHeight);
+
 	// ========== FEATURE 2: Draw budget/cost text ==========
 	pWind->SetPen(BLACK, 1);
 	pWind->SetFont(18, PLAIN, SWISS, "Arial");

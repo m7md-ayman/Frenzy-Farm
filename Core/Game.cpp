@@ -2,13 +2,12 @@
 #include "../Config/GameConfig.h"
 #include "../CMUgraphicsLib/auxil.h"
 #include <string>
-#include <random>   // for random movement
+#include <random>
 #include <cstdlib>
 #include <ctime>
 
 using namespace std;
 
-// Helper function for random int (FEATURE 15)
 static int randomInt(int min, int max)
 {
 	static random_device rd;
@@ -17,17 +16,15 @@ static int randomInt(int min, int max)
 	return dist(gen);
 }
 
-// Constructor
 Game::Game() :
 	timerSeconds(120),
 	currentLevel(1),
 	goalAnimals(10),
 	animalCount(0),
-	animalCapacity(10),		// start with room for 10 animals
+	animalCapacity(10),
 	productCount(0),
 	productCapacity(20)
 {
-	// Allocate arrays (FEATURE 10)
 	animals = new Animal * [animalCapacity];
 	products = new Product * [productCapacity];
 
@@ -35,11 +32,15 @@ Game::Game() :
 	createToolbar();
 	createBudgetbar();
 
-	// Keep Mohamed's visual background in the playing area.
 	pWind->DrawImage("images\\background.jpeg", 0, config.toolBarHeight * 2,
 		config.windWidth, config.windHeight);
 
-	// Keep Mohamed's wolf/chicken entities and add them to Abdel's dynamic list.
+	point warehousePoint;
+	warehousePoint.x = 500;
+	warehousePoint.y = 380;
+	myWarehouse = new Warehouse(this, warehousePoint, 140, 120);
+	
+
 	srand((unsigned int)time(0));
 	point wolfPoint;
 	wolfPoint.x = rand() % (range_max_x - range_min_x) + range_min_x;
@@ -56,7 +57,6 @@ Game::Game() :
 	clearStatusBar();
 }
 
-// Destructor – free all dynamic memory (Unit 3 rule)
 Game::~Game()
 {
 	for (int i = 0; i < animalCount; i++)
@@ -70,9 +70,9 @@ Game::~Game()
 	delete gameToolbar;
 	delete gameBudgetbar;
 	delete pWind;
+	delete myWarehouse;
 }
 
-// ---------- Mouse / keyboard input ----------
 clicktype Game::getMouseClick(int& x, int& y) const
 {
 	return pWind->WaitMouseClick(x, y);
@@ -130,7 +130,6 @@ void Game::clearStatusBar() const
 		config.windWidth, config.windHeight);
 }
 
-// ==================== FEATURE 1: drawStatusBar ====================
 void Game::drawStatusBar() const
 {
 	clearStatusBar();
@@ -151,7 +150,6 @@ void Game::drawStatusBar() const
 	w->DrawString(2 * colWidth + 10, textY, goalMsg);
 	w->DrawString(3 * colWidth + 10, textY, countMsg);
 }
-// =================================================================
 
 void Game::printMessage(string msg) const
 {
@@ -163,12 +161,10 @@ void Game::printMessage(string msg) const
 
 window* Game::getWind() const { return pWind; }
 
-// ==================== FEATURE 10 (part): Add animal/product ====================
 void Game::addAnimal(Animal* a)
 {
 	if (animalCount >= animalCapacity)
 	{
-		// Expand array (Unit 3 example)
 		int newCap = animalCapacity * 2;
 		Animal** newArr = new Animal * [newCap];
 		for (int i = 0; i < animalCount; i++)
@@ -194,9 +190,7 @@ void Game::addProduct(Product* p)
 	}
 	products[productCount++] = p;
 }
-// =============================================================================
 
-// ==================== FEATURE 10 & 12 & 15: The Game Loop ====================
 void Game::go()
 {
 	// Change window title
@@ -216,7 +210,7 @@ void Game::go()
 	{
 		// ---- 1. Process input (non-blocking) ----
 		int x, y;
-		clicktype c = pWind->GetMouseClick(x, y);	// returns NO_CLICK if empty
+		clicktype c = pWind->GetMouseClick(x, y);
 		if (c != NO_CLICK)
 		{
 			if (y >= 0 && y < config.toolBarHeight)
@@ -229,9 +223,20 @@ void Game::go()
 			}
 			else if (y >= 2 * config.toolBarHeight && y < config.windHeight - config.statusBarHeight)
 			{
-				// Playing area clicked – you can later add grass planting, wolf attacking, etc.
-				// For now, do nothing.
 			}
+		}
+
+		if (y >= 0 && y < config.toolBarHeight)
+		{
+			isExit = gameToolbar->handleClick(x, y);
+		}
+		else if (y >= config.toolBarHeight && y < 2 * config.toolBarHeight)
+		{
+			isExit = gameBudgetbar->handleClick(x, y);
+		}
+		else if (myWarehouse->isClicked(x, y))
+		{
+			myWarehouse->onClick();
 		}
 
 		// ---- 2. Update timer (FEATURE 12) ----
@@ -248,7 +253,7 @@ void Game::go()
 		{
 			animals[i]->moveStep();
 		}
-
+		myWarehouse->draw();
 		// ---- 4. Check goal (FEATURE 1 update) ----
 		// (The animalCount is already updated when animals are added/removed)
 		// If you want to trigger level up when animalCount >= goalAnimals, add it here.
@@ -261,6 +266,7 @@ void Game::go()
 		// Redraw toolbar and budget bar (they may have updated text)
 		gameToolbar->draw();
 		gameBudgetbar->draw();
+		myWarehouse->draw();
 
 		// Draw all animals
 		for (int i = 0; i < animalCount; i++)

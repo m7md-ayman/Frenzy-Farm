@@ -46,3 +46,13 @@ public:
 	virtual void draw() const override;
 	virtual void moveStep() override;
 };
+
+class Warehouse : public Drawable
+{
+public:
+	Warehouse(Game* r_pGame, point r_point, int r_width, int r_height);
+
+	void draw() const override;
+	void onClick();
+	bool isClicked(int x, int y) const;
+};

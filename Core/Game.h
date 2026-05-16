@@ -12,28 +12,22 @@ private:
 	Toolbar* gameToolbar;
 	Budgetbar* gameBudgetbar;
 
-	// ========== FEATURE 1: Status bar data ==========
 	int timerSeconds;
 	int currentLevel;
 	int goalAnimals;
-	int animalCount;			// total animals on field (chicken + cow)
-	// ===============================================
+	int animalCount;
+	Animal** animals;
+	int animalCapacity;
 
-	// ========== FEATURE 10 & 15: Animal list ==========
-	Animal** animals;			// array of pointers to animals
-	int animalCapacity;			// current max size of array
-	// ==================================================
-
-	// ========== FEATURE 7: Product list ==========
 	Product** products;
 	int productCount;
 	int productCapacity;
-	// ============================================
 
 public:
 	int budget = 2000;
 	Wolf* myWolf;
 	Chicken* myChicken;
+	Warehouse* myWarehouse;
 
 	Game();
 	~Game();
@@ -47,14 +41,12 @@ public:
 	void printBudget(string msg) const;
 	void clearStatusBar() const;
 
-	// FEATURE 1
 	void drawStatusBar() const;
 
 	void printMessage(string msg) const;
 	void go();
 	void go() const;
 
-	// Dynamic add helpers used by UI icons.
 	void addAnimal(Animal* a);
 	void addProduct(Product* p);
 

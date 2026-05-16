@@ -24,6 +24,8 @@ struct  //contains all game configurations (MAY be loaded from a configuration f
 	int	iconWidth = 70;			//Width of each icon in toolbar 
 	int wolfCounter = 0;
 	int chickenCounter = 0;
+	int eggCount = 3;
+	int milkCount = 5;
 } config;
 
 
