@@ -30,7 +30,10 @@ Game::Game() :
 	foodCapacity(10),
 	isPaused(false),
 	frameCount(0),
-	secondsSinceWolfSpawn(0)
+	secondsSinceWolfSpawn(0),
+	myWolf(nullptr),
+	myChicken(nullptr),
+	myWarehouse(nullptr)
 {
 	budget = config.startBudget;
 
@@ -214,7 +217,13 @@ void Game::removeAnimal(int index)
 {
 	if (index < 0 || index >= animalCount) return;
 
-	delete animals[index];
+	Animal* removing = animals[index];
+	if (myWolf && removing == static_cast<Animal*>(myWolf))
+		myWolf = nullptr;
+	if (myChicken && removing == static_cast<Animal*>(myChicken))
+		myChicken = nullptr;
+
+	delete removing;
 	for (int i = index; i < animalCount - 1; i++)
 		animals[i] = animals[i + 1];
 	animalCount--;
@@ -287,6 +296,9 @@ void Game::resumeGame()
 
 void Game::restartGame()
 {
+	myWolf = nullptr;
+	myChicken = nullptr;
+
 	for (int i = 0; i < animalCount; i++)
 		delete animals[i];
 	animalCount = 0;
@@ -380,6 +392,9 @@ void Game::loadGame(string filename)
 		return;
 	}
 
+	myWolf = nullptr;
+	myChicken = nullptr;
+
 	for (int i = 0; i < animalCount; i++)
 		delete animals[i];
 	animalCount = 0;
@@ -399,9 +414,6 @@ void Game::loadGame(string filename)
 
 	int savedAnimalCount;
 	fin >> savedAnimalCount;
-
-	myWolf = nullptr;
-	myChicken = nullptr;
 
 	for (int i = 0; i < savedAnimalCount; i++)
 	{
@@ -695,14 +707,15 @@ void Game::handleWolfClick(int x, int y)
 
 		Wolf* w = (Wolf*)animals[i];
 		w->registerClick();
-		if (w->getClickCount() >= config.wolfClicksToDestroy)
+		int hits = w->getClickCount();
+		if (hits >= config.wolfClicksToDestroy)
 		{
 			removeAnimal(i);
 			printMessage("Wolf defeated!");
 		}
 		else
 		{
-			printMessage("Wolf hit " + to_string(w->getClickCount()) + "/" + to_string(config.wolfClicksToDestroy));
+			printMessage("Wolf hit " + to_string(hits) + "/" + to_string(config.wolfClicksToDestroy));
 		}
 		return;
 	}
@@ -795,7 +808,17 @@ void Game::go()
 	while (!isExit && !gameOver && !gameWon)
 	{
 		int x = 0, y = 0;
-		clicktype c = pWind->GetMouseClick(x, y);
+		clicktype c = NO_CLICK;
+		while (true)
+		{
+			int tx, ty;
+			clicktype t = pWind->GetMouseClick(tx, ty);
+			if (t == NO_CLICK)
+				break;
+			x = tx;
+			y = ty;
+			c = t;
+		}
 
 		if (c == LEFT_CLICK)
 		{

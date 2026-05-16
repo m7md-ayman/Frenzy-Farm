@@ -24,6 +24,8 @@ Animal::Animal(Game* r_pGame, point r_point, int r_width, int r_height, string i
 	onGrass = false;
 }
 
+Animal::~Animal() {}
+
 void Animal::drawProductionCounter() const
 {
 	int maxF = getProductionMaxFrames();
@@ -143,6 +145,7 @@ Wolf::Wolf(Game* r_pGame, point r_point, int r_width, int r_height, int speed)
 	: Animal(r_pGame, r_point, r_width, r_height, ""), moveSpeed(speed), clickCount(0)
 {
 	config.wolfCounter++;
+	wolfNumber = config.wolfCounter;
 }
 
 void Wolf::draw() const
@@ -172,7 +175,7 @@ void Wolf::draw() const
 	pWind->DrawRectangle(x + 43, y + 6, x + 48, y + 11);
 
 	pWind->SetPen(WHITE, 1);
-	pWind->DrawString(x + 15, y - 15, to_string(config.wolfCounter));
+	pWind->DrawString(x + 15, y - 15, to_string(wolfNumber));
 }
 
 void Wolf::moveStep()
@@ -189,6 +192,7 @@ Chicken::Chicken(Game* r_pGame, point r_point, int r_width, int r_height)
 	: Animal(r_pGame, r_point, r_width, r_height, "")
 {
 	config.chickenCounter++;
+	chickenNumber = config.chickenCounter;
 }
 
 void Chicken::draw() const
@@ -224,7 +228,7 @@ void Chicken::draw() const
 	pWind->DrawRectangle(x + 8, y + 24, x + 28, y + 38);
 
 	pWind->SetPen(WHITE, 1);
-	pWind->DrawString(x + 5, y - 15, to_string(config.chickenCounter));
+	pWind->DrawString(x + 20, y + height + 5, to_string(chickenNumber));
 	drawProductionCounter();
 }
 

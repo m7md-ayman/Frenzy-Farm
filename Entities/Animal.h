@@ -24,6 +24,7 @@ public:
 	point curr_pos;
 	point curr_vel;
 	Animal(Game* r_pGame, point r_point, int r_width, int r_height, string img_path);
+	virtual ~Animal();
 	virtual void draw() const override;
 	virtual void moveStep() = 0;
 	virtual AnimalType getType() const = 0;
@@ -64,6 +65,7 @@ public:
 
 class Chicken : public Animal
 {
+	int chickenNumber;
 public:
 	Chicken(Game* r_pGame, point r_point, int r_width, int r_height);
 	virtual void draw() const override;
@@ -76,6 +78,7 @@ class Wolf : public Animal
 {
 	int moveSpeed;
 	int clickCount;
+	int wolfNumber;
 
 public:
 	Wolf(Game* r_pGame, point r_point, int r_width, int r_height, int speed = 3);
