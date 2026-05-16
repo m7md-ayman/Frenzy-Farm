@@ -711,13 +711,7 @@ void Game::handleWolfClick(int x, int y)
 		if (hits >= config.wolfClicksToDestroy)
 		{
 			removeAnimal(i);
-			printMessage("Wolf defeated!");
 		}
-		else
-		{
-			printMessage("Wolf hit " + to_string(hits) + "/" + to_string(config.wolfClicksToDestroy));
-		}
-		return;
 	}
 }
 
