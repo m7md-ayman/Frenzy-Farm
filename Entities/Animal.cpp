@@ -4,7 +4,6 @@
 #include <iostream>
 using namespace std;
 
-// Static random generator (FEATURE 15)
 int Animal::randomInt(int min, int max)
 {
 	static random_device rd;
@@ -20,6 +19,85 @@ Animal::Animal(Game* r_pGame, point r_point, int r_width, int r_height, string i
 	curr_pos = r_point;
 	curr_vel.x = 1;
 	curr_vel.y = 1;
+	age = 0;
+	productionCounter = 0;
+	onGrass = false;
+}
+
+void Animal::drawProductionCounter() const
+{
+	int maxF = getProductionMaxFrames();
+	if (maxF <= 0) return;
+
+	window* w = pGame->getWind();
+	w->SetPen(BLACK, 1);
+	w->SetFont(12, BOLD, SWISS, "Arial");
+	int pct = (productionCounter * 100) / maxF;
+	if (pct > 100) pct = 100;
+	w->DrawString(RefPoint.x, RefPoint.y - 12, to_string(pct) + "%");
+}
+
+void Animal::addProductionProgress(int amount)
+{
+	productionCounter += amount;
+	int maxF = getProductionMaxFrames();
+	if (maxF > 0 && productionCounter > maxF)
+		productionCounter = maxF;
+}
+
+void Animal::smoothRandomWalk(int minSpeed, int maxSpeed, int headingChangePeriod)
+{
+	if (headingChangePeriod < 1)
+		headingChangePeriod = 1;
+
+	if (age % headingChangePeriod == 0 || (curr_vel.x == 0 && curr_vel.y == 0))
+	{
+		int speed = randomInt(minSpeed, maxSpeed);
+		int attempts = 0;
+		do
+		{
+			curr_vel.x = randomInt(-speed, speed);
+			curr_vel.y = randomInt(-speed, speed);
+			attempts++;
+		} while (curr_vel.x == 0 && curr_vel.y == 0 && attempts < 12);
+
+		if (curr_vel.x == 0 && curr_vel.y == 0)
+			curr_vel.x = speed;
+	}
+
+	RefPoint.x += curr_vel.x;
+	RefPoint.y += curr_vel.y;
+	curr_pos = RefPoint;
+
+	const int minX = 0;
+	const int maxX = config.windWidth - width;
+	const int minY = 2 * config.toolBarHeight;
+	const int maxY = config.windHeight - config.statusBarHeight - height;
+
+	if (RefPoint.x < minX)
+	{
+		RefPoint.x = minX;
+		curr_vel.x = abs(curr_vel.x);
+		if (curr_vel.x == 0) curr_vel.x = minSpeed;
+	}
+	if (RefPoint.x > maxX)
+	{
+		RefPoint.x = maxX;
+		curr_vel.x = -abs(curr_vel.x);
+		if (curr_vel.x == 0) curr_vel.x = -minSpeed;
+	}
+	if (RefPoint.y < minY)
+	{
+		RefPoint.y = minY;
+		curr_vel.y = abs(curr_vel.y);
+		if (curr_vel.y == 0) curr_vel.y = minSpeed;
+	}
+	if (RefPoint.y > maxY)
+	{
+		RefPoint.y = maxY;
+		curr_vel.y = -abs(curr_vel.y);
+		if (curr_vel.y == 0) curr_vel.y = -minSpeed;
+	}
 }
 
 void Animal::draw() const
@@ -35,29 +113,8 @@ Chick::Chick(Game* r_pGame, point r_point, int r_width, int r_height, string img
 
 void Chick::moveStep()
 {
-	// Change direction occasionally (every ~10 frames)
-	static int stepCounter = 0;
-	stepCounter++;
-	if (stepCounter % 10 == 0)
-	{
-		int speed = randomInt(1, 3);			// chicken speed
-		curr_vel.x = randomInt(-speed, speed);
-		curr_vel.y = randomInt(-speed, speed);
-	}
-
-	// Update position
-	RefPoint.x += curr_vel.x;
-	RefPoint.y += curr_vel.y;
-	curr_pos = RefPoint;
-
-	// Keep inside playing area (between toolbar*2 and statusbar)
-	const int minX = 0, maxX = config.windWidth - width;
-	const int minY = 2 * config.toolBarHeight, maxY = config.windHeight - config.statusBarHeight - height;
-
-	if (RefPoint.x < minX) { RefPoint.x = minX; curr_vel.x = -curr_vel.x; }
-	if (RefPoint.x > maxX) { RefPoint.x = maxX; curr_vel.x = -curr_vel.x; }
-	if (RefPoint.y < minY) { RefPoint.y = minY; curr_vel.y = -curr_vel.y; }
-	if (RefPoint.y > maxY) { RefPoint.y = maxY; curr_vel.y = -curr_vel.y; }
+	age++;
+	smoothRandomWalk(3, 6, 12);
 }
 
 Cow::Cow(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
@@ -67,30 +124,23 @@ Cow::Cow(Game* r_pGame, point r_point, int r_width, int r_height, string img_pat
 
 void Cow::moveStep()
 {
-	static int stepCounter = 0;
-	stepCounter++;
-	if (stepCounter % 15 == 0)	// cows change direction less often
-	{
-		int speed = randomInt(1, 2);		// slower
-		curr_vel.x = randomInt(-speed, speed);
-		curr_vel.y = randomInt(-speed, speed);
-	}
-
-	RefPoint.x += curr_vel.x;
-	RefPoint.y += curr_vel.y;
-	curr_pos = RefPoint;
-
-	const int minX = 0, maxX = config.windWidth - width;
-	const int minY = 2 * config.toolBarHeight, maxY = config.windHeight - config.statusBarHeight - height;
-
-	if (RefPoint.x < minX) { RefPoint.x = minX; curr_vel.x = -curr_vel.x; }
-	if (RefPoint.x > maxX) { RefPoint.x = maxX; curr_vel.x = -curr_vel.x; }
-	if (RefPoint.y < minY) { RefPoint.y = minY; curr_vel.y = -curr_vel.y; }
-	if (RefPoint.y > maxY) { RefPoint.y = maxY; curr_vel.y = -curr_vel.y; }
+	age++;
+	smoothRandomWalk(2, 5, 14);
 }
 
-Wolf::Wolf(Game* r_pGame, point r_point, int r_width, int r_height)
-	: Animal(r_pGame, r_point, r_width, r_height, "")
+void Cow::draw() const
+{
+	Animal::draw();
+	drawProductionCounter();
+}
+
+int Cow::getProductionMaxFrames() const
+{
+	return config.cowProductionFrames;
+}
+
+Wolf::Wolf(Game* r_pGame, point r_point, int r_width, int r_height, int speed)
+	: Animal(r_pGame, r_point, r_width, r_height, ""), moveSpeed(speed), clickCount(0)
 {
 	config.wolfCounter++;
 }
@@ -127,17 +177,12 @@ void Wolf::draw() const
 
 void Wolf::moveStep()
 {
-	int dx = randomInt(-5, 5);
-	int dy = randomInt(-5, 5);
-	RefPoint.x += dx;
-	RefPoint.y += dy;
-
-	const int minX = 0, maxX = config.windWidth - width;
-	const int minY = 2 * config.toolBarHeight, maxY = config.windHeight - config.statusBarHeight - height;
-	if (RefPoint.x < minX) RefPoint.x = minX;
-	if (RefPoint.x > maxX) RefPoint.x = maxX;
-	if (RefPoint.y < minY) RefPoint.y = minY;
-	if (RefPoint.y > maxY) RefPoint.y = maxY;
+	age++;
+	int wolfMin = moveSpeed;
+	int wolfMax = moveSpeed + 3;
+	if (wolfMax < wolfMin + 1)
+		wolfMax = wolfMin + 1;
+	smoothRandomWalk(wolfMin, wolfMax, 18);
 }
 
 Chicken::Chicken(Game* r_pGame, point r_point, int r_width, int r_height)
@@ -180,21 +225,18 @@ void Chicken::draw() const
 
 	pWind->SetPen(WHITE, 1);
 	pWind->DrawString(x + 5, y - 15, to_string(config.chickenCounter));
+	drawProductionCounter();
+}
+
+int Chicken::getProductionMaxFrames() const
+{
+	return config.chickenProductionFrames;
 }
 
 void Chicken::moveStep()
 {
-	int dx = randomInt(-3, 3);
-	int dy = randomInt(-3, 3);
-	RefPoint.x += dx;
-	RefPoint.y += dy;
-
-	const int minX = 0, maxX = config.windWidth - width;
-	const int minY = 2 * config.toolBarHeight, maxY = config.windHeight - config.statusBarHeight - height;
-	if (RefPoint.x < minX) RefPoint.x = minX;
-	if (RefPoint.x > maxX) RefPoint.x = maxX;
-	if (RefPoint.y < minY) RefPoint.y = minY;
-	if (RefPoint.y > maxY) RefPoint.y = maxY;
+	age++;
+	smoothRandomWalk(3, 6, 10);
 }
 
 Warehouse::Warehouse(Game* r_pGame, point r_point, int r_width, int r_height)
@@ -253,27 +295,14 @@ void Warehouse::onClick()
 		w->SetFont(13, BOLD, SWISS, "Arial");
 		w->DrawString(20, 60, "Egg  : " + to_string(config.eggCount));
 
-		if (config.eggCount > 0)
-		{
-			w->SetPen(BLACK, 1);
-			w->SetBrush(LIGHTGREEN);
-			w->DrawRectangle(180, 55, 260, 85);
-			w->SetFont(12, BOLD, SWISS, "Arial");
-			w->DrawString(195, 62, "Sell +150");
-		}
-
 		w->SetPen(BLACK, 1);
-		w->SetFont(13, BOLD, SWISS, "Arial");
-		w->DrawString(20, 110, "Milk : " + to_string(config.milkCount));
-
-		if (config.milkCount > 0)
-		{
-			w->SetPen(BLACK, 1);
-			w->SetBrush(LIGHTGREEN);
-			w->DrawRectangle(180, 105, 260, 135);
-			w->SetFont(12, BOLD, SWISS, "Arial");
-			w->DrawString(195, 112, "Sell +100");
-		}
+		w->SetBrush(config.eggCount > 0 ? LIGHTGREEN : LIGHTGRAY);
+		w->DrawRectangle(180, 55, 260, 85);
+		w->SetFont(12, BOLD, SWISS, "Arial");
+		if (config.eggCount > 0)
+			w->DrawString(195, 62, "Sell +" + to_string(config.eggSellPrice));
+		else
+			w->DrawString(188, 62, "Sell (empty)");
 
 		w->SetPen(BLACK, 1);
 		w->SetBrush(LIGHTGRAY);
@@ -289,17 +318,7 @@ void Warehouse::onClick()
 			if (config.eggCount > 0)
 			{
 				config.eggCount--;
-				pGame->budget += 150;
-				pGame->clearBudget();
-				pGame->printBudget("BUDGET = $" + to_string(pGame->budget));
-			}
-		}
-		else if (cx >= 180 && cx <= 260 && cy >= 105 && cy <= 135)
-		{
-			if (config.milkCount > 0)
-			{
-				config.milkCount--;
-				pGame->budget += 100;
+				pGame->budget += config.eggSellPrice;
 				pGame->clearBudget();
 				pGame->printBudget("BUDGET = $" + to_string(pGame->budget));
 			}

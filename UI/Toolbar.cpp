@@ -16,48 +16,53 @@ void ToolbarIcon::draw() const
 	pWind->DrawImage(image_path, RefPoint.x, RefPoint.y, width, height);
 }
 
+// FEATURE 20: Restart
 RestartIcon::RestartIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path) : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path)
 {}
 
 void RestartIcon::onClick()
 {
-	cout << "Restart clicked" << endl;
+	pGame->restartGame();
 }
 
+// FEATURE 19: Pause
 PauseIcon::PauseIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
 	: ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void PauseIcon::onClick()
 {
-	cout << "Pause clicked" << endl;
+	pGame->pauseGame();
 }
 
+// FEATURE 19: Resume
 ResumeIcon::ResumeIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
 	: ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void ResumeIcon::onClick()
 {
-	cout << "Resume clicked" << endl;
+	pGame->resumeGame();
 }
 
+// FEATURE 21: Save
 SaveIcon::SaveIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
 	: ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void SaveIcon::onClick()
 {
-	cout << "Save clicked" << endl;
+	pGame->saveGame("savegame.txt");
 }
 
+// FEATURE 22: Load
 LoadToolbarIcon::LoadToolbarIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
 	: ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path) {
 }
 
 void LoadToolbarIcon::onClick()
 {
-	cout << "Load clicked" << endl;
+	pGame->loadGame("savegame.txt");
 }
 
 ExitIcon::ExitIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path) : ToolbarIcon(r_pGame, r_point, r_width, r_height, img_path)

@@ -5,6 +5,8 @@
 #include <random>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -17,16 +19,24 @@ static int randomInt(int min, int max)
 }
 
 Game::Game() :
-	timerSeconds(120),
+	timerSeconds(config.level1Time),
 	currentLevel(1),
-	goalAnimals(10),
+	goalBudget(config.level1GoalBudget),
 	animalCount(0),
 	animalCapacity(10),
 	productCount(0),
-	productCapacity(20)
+	productCapacity(20),
+	foodCount(0),
+	foodCapacity(10),
+	isPaused(false),
+	frameCount(0),
+	secondsSinceWolfSpawn(0)
 {
+	budget = config.startBudget;
+
 	animals = new Animal * [animalCapacity];
 	products = new Product * [productCapacity];
+	foodAreas = new FoodArea * [foodCapacity];
 
 	pWind = CreateWind(config.windWidth, config.windHeight, config.wx, config.wy);
 	createToolbar();
@@ -39,15 +49,17 @@ Game::Game() :
 	warehousePoint.x = 500;
 	warehousePoint.y = 380;
 	myWarehouse = new Warehouse(this, warehousePoint, 140, 120);
-	
 
 	srand((unsigned int)time(0));
+
+	// Spawn wolf
 	point wolfPoint;
-	wolfPoint.x = rand() % (range_max_x - range_min_x) + range_min_x;
-	wolfPoint.y = rand() % (range_max_y - range_min_y) + range_min_y;
-	myWolf = new Wolf(this, wolfPoint, 50, 40);
+	wolfPoint.x = randomInt(50, config.windWidth - 100);
+	wolfPoint.y = randomInt(config.toolBarHeight * 2 + 50, config.windHeight - config.statusBarHeight - 100);
+	myWolf = new Wolf(this, wolfPoint, 50, 40, config.wolfBaseSpeed + currentLevel);
 	addAnimal(myWolf);
 
+	// Spawn chicken
 	point chickenPoint;
 	chickenPoint.x = 300;
 	chickenPoint.y = 250;
@@ -66,6 +78,10 @@ Game::~Game()
 	for (int i = 0; i < productCount; i++)
 		delete products[i];
 	delete[] products;
+
+	for (int i = 0; i < foodCount; i++)
+		delete foodAreas[i];
+	delete[] foodAreas;
 
 	delete gameToolbar;
 	delete gameBudgetbar;
@@ -139,16 +155,18 @@ void Game::drawStatusBar() const
 
 	string timeMsg = "Time: " + to_string(timerSeconds) + "s";
 	string levelMsg = "Level: " + to_string(currentLevel);
-	string goalMsg = "Goal: " + to_string(goalAnimals) + " animals";
+	string goalMsg = "Goal: $" + to_string(budget) + "/$" + to_string(goalBudget);
 	string countMsg = "Animals: " + to_string(animalCount);
+	string pauseMsg = isPaused ? " [PAUSED]" : "";
 
-	int colWidth = config.windWidth / 4;
+	int colWidth = config.windWidth / 5;
 	int textY = config.windHeight - (int)(0.85 * config.statusBarHeight);
 
 	w->DrawString(0 * colWidth + 10, textY, timeMsg);
 	w->DrawString(1 * colWidth + 10, textY, levelMsg);
 	w->DrawString(2 * colWidth + 10, textY, goalMsg);
 	w->DrawString(3 * colWidth + 10, textY, countMsg);
+	w->DrawString(4 * colWidth + 10, textY, pauseMsg);
 }
 
 void Game::printMessage(string msg) const
@@ -160,6 +178,7 @@ void Game::printMessage(string msg) const
 }
 
 window* Game::getWind() const { return pWind; }
+
 
 void Game::addAnimal(Animal* a)
 {
@@ -191,6 +210,575 @@ void Game::addProduct(Product* p)
 	products[productCount++] = p;
 }
 
+void Game::removeAnimal(int index)
+{
+	if (index < 0 || index >= animalCount) return;
+
+	delete animals[index];
+	for (int i = index; i < animalCount - 1; i++)
+		animals[i] = animals[i + 1];
+	animalCount--;
+}
+
+void Game::removeProduct(int index)
+{
+	if (index < 0 || index >= productCount) return;
+
+	delete products[index];
+	for (int i = index; i < productCount - 1; i++)
+		products[i] = products[i + 1];
+	productCount--;
+}
+
+void Game::addFoodArea(FoodArea* f)
+{
+	if (foodCount >= foodCapacity)
+	{
+		int newCap = foodCapacity * 2;
+		FoodArea** newArr = new FoodArea * [newCap];
+		for (int i = 0; i < foodCount; i++)
+			newArr[i] = foodAreas[i];
+		delete[] foodAreas;
+		foodAreas = newArr;
+		foodCapacity = newCap;
+	}
+	foodAreas[foodCount++] = f;
+}
+
+void Game::removeFoodArea(int index)
+{
+	if (index < 0 || index >= foodCount) return;
+	delete foodAreas[index];
+	for (int i = index; i < foodCount - 1; i++)
+		foodAreas[i] = foodAreas[i + 1];
+	foodCount--;
+}
+
+void Game::removeDepletedFoodAreas()
+{
+	for (int i = foodCount - 1; i >= 0; i--)
+	{
+		if (foodAreas[i]->isDepleted())
+			removeFoodArea(i);
+	}
+}
+
+void Game::drawFieldBoundaries() const
+{
+	int top = config.toolBarHeight * 2;
+	int bottom = config.windHeight - config.statusBarHeight;
+	pWind->SetPen(DARKGREEN, 3);
+	pWind->DrawRectangle(2, top + 2, config.windWidth - 2, bottom - 2, FRAME);
+}
+
+//PAUSE / RESUME
+
+void Game::pauseGame()
+{
+	isPaused = true;
+}
+
+void Game::resumeGame()
+{
+	isPaused = false;
+}
+
+//RESTART
+
+void Game::restartGame()
+{
+	for (int i = 0; i < animalCount; i++)
+		delete animals[i];
+	animalCount = 0;
+
+	for (int i = 0; i < productCount; i++)
+		delete products[i];
+	productCount = 0;
+
+	budget = config.startBudget;
+	currentLevel = 1;
+	timerSeconds = config.level1Time;
+	goalBudget = config.level1GoalBudget;
+	isPaused = false;
+	frameCount = 0;
+	secondsSinceWolfSpawn = 0;
+	config.wolfCounter = 0;
+	config.chickenCounter = 0;
+	config.eggCount = 0;
+	config.milkCount = 0;
+
+	for (int i = 0; i < foodCount; i++)
+		delete foodAreas[i];
+	foodCount = 0;
+
+	point wolfPoint;
+	wolfPoint.x = randomInt(50, config.windWidth - 100);
+	wolfPoint.y = randomInt(config.toolBarHeight * 2 + 50, config.windHeight - config.statusBarHeight - 100);
+	myWolf = new Wolf(this, wolfPoint, 50, 40, config.wolfBaseSpeed + currentLevel);
+	addAnimal(myWolf);
+
+	point chickenPoint;
+	chickenPoint.x = 300;
+	chickenPoint.y = 250;
+	myChicken = new Chicken(this, chickenPoint, 55, 60);
+	addAnimal(myChicken);
+}
+
+//SAVE GAME
+
+void Game::saveGame(string filename)
+{
+	ofstream fout(filename);
+	if (!fout.is_open())
+	{
+		printMessage("Error: Could not save game!");
+		return;
+	}
+
+	fout << budget << endl;
+	fout << timerSeconds << endl;
+	fout << currentLevel << endl;
+	fout << goalBudget << endl;
+	fout << config.eggCount << endl;
+	fout << config.milkCount << endl;
+
+	fout << animalCount << endl;
+	for (int i = 0; i < animalCount; i++)
+	{
+		fout << animals[i]->getType() << " "
+			<< animals[i]->getX() << " "
+			<< animals[i]->getY() << endl;
+	}
+
+	fout << foodCount << endl;
+	for (int i = 0; i < foodCount; i++)
+	{
+		fout << foodAreas[i]->getX() << " "
+			<< foodAreas[i]->getY() << " "
+			<< foodAreas[i]->getFoodCounter() << endl;
+	}
+
+	fout << productCount << endl;
+	for (int i = 0; i < productCount; i++)
+	{
+		int ptype = products[i]->isEgg() ? 1 : 2;
+		fout << ptype << " " << products[i]->getX() << " " << products[i]->getY() << endl;
+	}
+
+	fout.close();
+	printMessage("Game saved successfully!");
+}
+
+//LOAD GAME
+
+void Game::loadGame(string filename)
+{
+	ifstream fin(filename);
+	if (!fin.is_open())
+	{
+		printMessage("Error: No save file found!");
+		return;
+	}
+
+	for (int i = 0; i < animalCount; i++)
+		delete animals[i];
+	animalCount = 0;
+	for (int i = 0; i < productCount; i++)
+		delete products[i];
+	productCount = 0;
+
+	config.wolfCounter = 0;
+	config.chickenCounter = 0;
+
+	fin >> budget;
+	fin >> timerSeconds;
+	fin >> currentLevel;
+	fin >> goalBudget;
+	fin >> config.eggCount;
+	fin >> config.milkCount;
+
+	int savedAnimalCount;
+	fin >> savedAnimalCount;
+
+	myWolf = nullptr;
+	myChicken = nullptr;
+
+	for (int i = 0; i < savedAnimalCount; i++)
+	{
+		int type, ax, ay;
+		fin >> type >> ax >> ay;
+		point p; p.x = ax; p.y = ay;
+
+		Animal* a = nullptr;
+		switch (type)
+		{
+		case ANIMAL_CHICK:
+			a = new Chick(this, p, 50, 50, "images\\chick.jpg");
+			break;
+		case ANIMAL_COW:
+			a = new Cow(this, p, 50, 50, "images\\cow.jpg");
+			break;
+		case ANIMAL_CHICKEN:
+			a = new Chicken(this, p, 55, 60);
+			if (!myChicken) myChicken = (Chicken*)a;
+			break;
+		case ANIMAL_WOLF:
+		{
+			int wolfSpeed = config.wolfBaseSpeed + currentLevel;
+			a = new Wolf(this, p, 50, 40, wolfSpeed);
+			if (!myWolf) myWolf = (Wolf*)a;
+			break;
+		}
+		}
+		if (a) addAnimal(a);
+	}
+
+	int savedFoodCount = 0;
+	if (fin >> savedFoodCount)
+	{
+		for (int i = 0; i < savedFoodCount; i++)
+		{
+			int fx, fy, fcnt;
+			if (!(fin >> fx >> fy >> fcnt))
+				break;
+			point fp; fp.x = fx; fp.y = fy;
+			addFoodArea(new FoodArea(this, fp, config.foodAreaWidth, config.foodAreaHeight, fcnt));
+		}
+	}
+
+	int savedProductCount = 0;
+	if (fin >> savedProductCount)
+	{
+		for (int i = 0; i < savedProductCount; i++)
+		{
+			int ptype, px, py;
+			if (!(fin >> ptype >> px >> py))
+				break;
+			point pp; pp.x = px; pp.y = py;
+			if (ptype == 1)
+				addProduct(new Egg(this, pp));
+			else
+				addProduct(new Milk(this, pp));
+		}
+	}
+
+	fin.close();
+	isPaused = false;
+	frameCount = 0;
+	printMessage("Game loaded successfully!");
+}
+
+//WOLF EATS ANIMALS
+
+void Game::checkWolfCollisions()
+{
+	for (int w = 0; w < animalCount; w++)
+	{
+		if (animals[w]->getType() != ANIMAL_WOLF) continue;
+
+		int wx = animals[w]->getX();
+		int wy = animals[w]->getY();
+
+		for (int j = 0; j < animalCount; j++)
+		{
+			if (j == w) continue;
+			if (animals[j]->getType() == ANIMAL_WOLF) continue;
+
+			int ax = animals[j]->getX();
+			int ay = animals[j]->getY();
+
+			int dx = wx - ax;
+			int dy = wy - ay;
+			int distSq = dx * dx + dy * dy;
+			int eatDist = config.wolfEatDistance;
+
+			if (distSq < eatDist * eatDist)
+			{
+				removeAnimal(j);
+				if (j < w) w--;
+				j--;
+			}
+		}
+	}
+}
+
+void Game::spawnProductAtAnimal(Animal* a, bool isEgg)
+{
+	(void)a;
+	if (isEgg)
+	{
+		if (config.eggCount < config.warehouseCapacity)
+		{
+			config.eggCount++;
+			printMessage("Egg sent to warehouse!");
+		}
+	}
+	else
+	{
+		if (config.milkCount < config.warehouseCapacity)
+		{
+			config.milkCount++;
+			printMessage("Milk sent to warehouse!");
+		}
+	}
+}
+
+//LEVEL PROGRESSION
+
+int Game::getGoalBudgetForLevel(int level) const
+{
+	switch (level)
+	{
+	case 1: return config.level1GoalBudget;
+	case 2: return config.level2GoalBudget;
+	case 3: return config.level3GoalBudget;
+	default: return config.level3GoalBudget;
+	}
+}
+
+int Game::getTimeForLevel(int level) const
+{
+	switch (level)
+	{
+	case 1: return config.level1Time;
+	case 2: return config.level2Time;
+	case 3: return config.level3Time;
+	default: return config.level3Time;
+	}
+}
+
+void Game::checkLevelUp()
+{
+	if (budget < goalBudget)
+		return;
+
+	if (currentLevel >= 3)
+		return;
+
+	currentLevel++;
+	goalBudget = getGoalBudgetForLevel(currentLevel);
+	timerSeconds = getTimeForLevel(currentLevel);
+	secondsSinceWolfSpawn = 0;
+
+	point wolfPoint;
+	wolfPoint.x = randomInt(50, config.windWidth - 100);
+	wolfPoint.y = randomInt(config.toolBarHeight * 2 + 50, config.windHeight - config.statusBarHeight - 100);
+	int wolfSpeed = config.wolfBaseSpeed + currentLevel;
+	addAnimal(new Wolf(this, wolfPoint, 50, 40, wolfSpeed));
+
+	printMessage("LEVEL UP! Level " + to_string(currentLevel) + " - Reach $" + to_string(goalBudget));
+}
+
+
+void Game::checkChickGrowth()
+{
+	for (int i = 0; i < animalCount; i++)
+	{
+		if (animals[i]->getType() == ANIMAL_CHICK)
+		{
+			Chick* chick = (Chick*)animals[i];
+			if (chick->getAge() >= config.chickGrowthFrames)
+			{
+				point p;
+				p.x = chick->getX();
+				p.y = chick->getY();
+
+				delete animals[i];
+
+				Chicken* newChicken = new Chicken(this, p, 55, 60);
+				animals[i] = newChicken; 
+			}
+		}
+	}
+}
+
+void Game::checkFoodCollisions()
+{
+	for (int i = 0; i < animalCount; i++)
+	{
+		if (animals[i]->getType() != ANIMAL_WOLF)
+			animals[i]->setOnGrass(false);
+	}
+
+	for (int f = 0; f < foodCount; f++)
+	{
+		if (foodAreas[f]->isDepleted())
+			continue;
+
+		for (int i = 0; i < animalCount; i++)
+		{
+			Animal* a = animals[i];
+			AnimalType t = a->getType();
+			if (t != ANIMAL_CHICKEN && t != ANIMAL_COW)
+				continue;
+
+			if (foodAreas[f]->overlaps(a->getX(), a->getY(), a->getW(), a->getH()))
+			{
+				a->setOnGrass(true);
+				foodAreas[f]->consumeFood(config.foodPerBite);
+				a->addProductionProgress(config.grassProductionBonus);
+			}
+		}
+	}
+	removeDepletedFoodAreas();
+}
+
+static void tryCompleteProduction(Game* game, Animal* a)
+{
+	int maxF = a->getProductionMaxFrames();
+	if (maxF <= 0 || a->getProductionCounter() < maxF)
+		return;
+
+	AnimalType t = a->getType();
+	if (t == ANIMAL_CHICKEN)
+		game->spawnProductAtAnimal(a, true);
+	else if (t == ANIMAL_COW)
+		game->spawnProductAtAnimal(a, false);
+
+	a->resetProductionCounter();
+}
+
+void Game::updateWolfSpawns()
+{
+	secondsSinceWolfSpawn++;
+	int interval = config.wolfSpawnIntervalSec - (currentLevel * 5);
+	if (interval < 15)
+		interval = 15;
+
+	if (secondsSinceWolfSpawn >= interval)
+	{
+		secondsSinceWolfSpawn = 0;
+		point wolfPoint;
+		wolfPoint.x = randomInt(50, config.windWidth - 100);
+		wolfPoint.y = randomInt(config.toolBarHeight * 2 + 50, config.windHeight - config.statusBarHeight - 100);
+		int wolfSpeed = config.wolfBaseSpeed + currentLevel;
+		addAnimal(new Wolf(this, wolfPoint, 50, 40, wolfSpeed));
+	}
+}
+
+void Game::handleProductClick(int x, int y)
+{
+	for (int i = 0; i < productCount; i++)
+	{
+		if (!products[i]->containsPoint(x, y))
+			continue;
+
+		if (products[i]->isEgg())
+		{
+			if (config.eggCount < config.warehouseCapacity)
+				config.eggCount++;
+		}
+		else
+		{
+			if (config.milkCount < config.warehouseCapacity)
+				config.milkCount++;
+		}
+		removeProduct(i);
+		printMessage("Product collected!");
+		return;
+	}
+}
+
+void Game::handleWolfClick(int x, int y)
+{
+	for (int i = 0; i < animalCount; i++)
+	{
+		if (animals[i]->getType() != ANIMAL_WOLF)
+			continue;
+
+		int ax = animals[i]->getX();
+		int ay = animals[i]->getY();
+		int aw = animals[i]->getW();
+		int ah = animals[i]->getH();
+		if (x < ax || x > ax + aw || y < ay || y > ay + ah)
+			continue;
+
+		Wolf* w = (Wolf*)animals[i];
+		w->registerClick();
+		if (w->getClickCount() >= config.wolfClicksToDestroy)
+		{
+			removeAnimal(i);
+			printMessage("Wolf defeated!");
+		}
+		else
+		{
+			printMessage("Wolf hit " + to_string(w->getClickCount()) + "/" + to_string(config.wolfClicksToDestroy));
+		}
+		return;
+	}
+}
+
+void Game::handlePlayingAreaClick(int x, int y)
+{
+	if (budget < config.waterCost)
+		return;
+
+	budget -= config.waterCost;
+	point p;
+	p.x = x - config.foodAreaWidth / 2;
+	p.y = y - config.foodAreaHeight / 2;
+	addFoodArea(new FoodArea(this, p, config.foodAreaWidth, config.foodAreaHeight, config.foodAreaInitialCounter));
+}
+
+//WIN / GAME OVER SCREENS
+
+void Game::showWinScreen()
+{
+	pWind->SetBuffering(false);
+
+	pWind->SetPen(DARKGREEN, 1);
+	pWind->SetBrush(DARKGREEN);
+	pWind->DrawRectangle(config.windWidth / 4, config.windHeight / 4,
+		3 * config.windWidth / 4, 3 * config.windHeight / 4);
+
+	pWind->SetPen(GOLD, 4);
+	pWind->DrawRectangle(config.windWidth / 4 + 5, config.windHeight / 4 + 5,
+		3 * config.windWidth / 4 - 5, 3 * config.windHeight / 4 - 5, FRAME);
+
+	pWind->SetPen(WHITE, 1);
+	pWind->SetFont(40, BOLD, BY_NAME, "Arial");
+	pWind->DrawString(config.windWidth / 2 - 120, config.windHeight / 2 - 60, "YOU WIN!");
+
+	pWind->SetFont(20, BOLD, BY_NAME, "Arial");
+	pWind->DrawString(config.windWidth / 2 - 140, config.windHeight / 2,
+		"All levels completed! Budget: $" + to_string(budget));
+
+	pWind->SetFont(16, PLAIN, BY_NAME, "Arial");
+	pWind->DrawString(config.windWidth / 2 - 80, config.windHeight / 2 + 40, "Click to exit.");
+
+	int dx, dy;
+	pWind->WaitMouseClick(dx, dy);
+}
+
+void Game::showGameOverScreen()
+{
+	pWind->SetBuffering(false);
+
+	pWind->SetPen(DARKRED, 1);
+	pWind->SetBrush(DARKRED);
+	pWind->DrawRectangle(config.windWidth / 4, config.windHeight / 4,
+		3 * config.windWidth / 4, 3 * config.windHeight / 4);
+
+	pWind->SetPen(RED, 4);
+	pWind->DrawRectangle(config.windWidth / 4 + 5, config.windHeight / 4 + 5,
+		3 * config.windWidth / 4 - 5, 3 * config.windHeight / 4 - 5, FRAME);
+
+	pWind->SetPen(WHITE, 1);
+	pWind->SetFont(40, BOLD, BY_NAME, "Arial");
+	pWind->DrawString(config.windWidth / 2 - 140, config.windHeight / 2 - 60, "GAME OVER");
+
+	pWind->SetFont(20, BOLD, BY_NAME, "Arial");
+	pWind->DrawString(config.windWidth / 2 - 160, config.windHeight / 2,
+		"Time's up! Level: " + to_string(currentLevel) + "  Budget: $" + to_string(budget));
+
+	pWind->SetFont(16, PLAIN, BY_NAME, "Arial");
+	pWind->DrawString(config.windWidth / 2 - 80, config.windHeight / 2 + 40, "Click to exit.");
+
+	int dx, dy;
+	pWind->WaitMouseClick(dx, dy);
+}
+
+
 void Game::go()
 {
 	// Change window title
@@ -201,17 +789,15 @@ void Game::go()
 
 	bool isExit = false;
 	bool gameOver = false;
-	int frameDelay = 30;			// about 33 FPS
+	bool gameWon = false;
+	int frameDelay = 20;
 
-	// We'll use the existing ElapsedTime function (auxil.h) for 1-second ticks
-	// It returns true every time the interval has passed
-
-	while (!isExit && !gameOver)
+	while (!isExit && !gameOver && !gameWon)
 	{
-		// ---- 1. Process input (non-blocking) ----
-		int x, y;
+		int x = 0, y = 0;
 		clicktype c = pWind->GetMouseClick(x, y);
-		if (c != NO_CLICK)
+
+		if (c == LEFT_CLICK)
 		{
 			if (y >= 0 && y < config.toolBarHeight)
 			{
@@ -221,85 +807,90 @@ void Game::go()
 			{
 				isExit = gameBudgetbar->handleClick(x, y);
 			}
-			else if (y >= 2 * config.toolBarHeight && y < config.windHeight - config.statusBarHeight)
+			else if (myWarehouse && myWarehouse->isClicked(x, y))
 			{
+				myWarehouse->onClick();
+			}
+			else if (y >= config.toolBarHeight * 2 && y < config.windHeight - config.statusBarHeight)
+			{
+				handleWolfClick(x, y);
+				handleProductClick(x, y);
 			}
 		}
 
-		if (y >= 0 && y < config.toolBarHeight)
+		if (!isPaused)
 		{
-			isExit = gameToolbar->handleClick(x, y);
-		}
-		else if (y >= config.toolBarHeight && y < 2 * config.toolBarHeight)
-		{
-			isExit = gameBudgetbar->handleClick(x, y);
-		}
-		else if (myWarehouse->isClicked(x, y))
-		{
-			myWarehouse->onClick();
-		}
+			if (ElapsedTime(1000))
+			{
+				if (timerSeconds > 0)
+					timerSeconds--;
+				else
+					gameOver = true;
+				updateWolfSpawns();
+			}
 
-		// ---- 2. Update timer (FEATURE 12) ----
-		if (ElapsedTime(1000))		// true once per second
-		{
-			if (timerSeconds > 0)
-				timerSeconds--;
-			else
-				gameOver = true;	// time's up
-		}
+			frameCount++;
 
-		// ---- 3. Update animal positions (FEATURE 15) ----
-		for (int i = 0; i < animalCount; i++)
-		{
-			animals[i]->moveStep();
-		}
-		myWarehouse->draw();
-		// ---- 4. Check goal (FEATURE 1 update) ----
-		// (The animalCount is already updated when animals are added/removed)
-		// If you want to trigger level up when animalCount >= goalAnimals, add it here.
+			for (int i = 0; i < animalCount; i++)
+				animals[i]->moveStep();
 
-		// ---- 5. Redraw everything ----
-		// Preserve Mohamed's visual theme (background image).
+			checkFoodCollisions();
+
+			for (int i = 0; i < animalCount; i++)
+			{
+				AnimalType t = animals[i]->getType();
+				if (t == ANIMAL_CHICKEN || t == ANIMAL_COW)
+					animals[i]->addProductionProgress(config.passiveProductionPerFrame);
+			}
+
+			for (int i = 0; i < animalCount; i++)
+				tryCompleteProduction(this, animals[i]);
+
+			checkWolfCollisions();
+			checkChickGrowth();
+			checkLevelUp();
+
+			if (currentLevel >= 3 && budget >= goalBudget)
+				gameWon = true;
+		}
+	
 		pWind->DrawImage("images\\background.jpeg", 0, config.toolBarHeight * 2,
 			config.windWidth, config.windHeight);
 
-		// Redraw toolbar and budget bar (they may have updated text)
 		gameToolbar->draw();
 		gameBudgetbar->draw();
-		myWarehouse->draw();
 
-		// Draw all animals
+		drawFieldBoundaries();
+
+		for (int i = 0; i < foodCount; i++)
+			foodAreas[i]->draw();
+
+		if (myWarehouse) myWarehouse->draw();
+
 		for (int i = 0; i < animalCount; i++)
 			animals[i]->draw();
 
-		// Draw all products (FEATURE 7)
 		for (int i = 0; i < productCount; i++)
 			products[i]->draw();
 
-		// Draw status bar
 		drawStatusBar();
-
-		// Update the screen (double buffer swap)
 		pWind->UpdateBuffer();
 
-		// Small pause to cap frame rate
 		Pause(frameDelay);
 	}
 
-	// Game Over message
-	if (gameOver)
+	// End screens
+	if (gameWon)
 	{
-		pWind->SetBuffering(false);		// turn off buffering for final message
-		printMessage("Game Over! Click to exit.");
-		pWind->SetBuffering(true);
-		int dummyX, dummyY;
-		pWind->WaitMouseClick(dummyX, dummyY);
+		showWinScreen();
+	}
+	else if (gameOver)
+	{
+		showGameOverScreen();
 	}
 }
 
 void Game::go() const
 {
-	// Backward-compatibility overload for older object files that
-	// still reference the const-qualified signature.
 	const_cast<Game*>(this)->go();
 }

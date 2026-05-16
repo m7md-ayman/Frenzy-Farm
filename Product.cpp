@@ -11,8 +11,14 @@ void Product::draw() const
 	pGame->getWind()->DrawImage(imagePath, RefPoint.x, RefPoint.y, width, height);
 }
 
+bool Product::containsPoint(int x, int y) const
+{
+	return x >= RefPoint.x && x <= RefPoint.x + width &&
+		y >= RefPoint.y && y <= RefPoint.y + height;
+}
+
 Egg::Egg(Game* pGame, point pos)
-	: Product(pGame, pos, 20, 20, "images\\egg.jpg")   // make sure image exists
+	: Product(pGame, pos, 20, 20, "images\\egg.jpg") 
 {
 }
 

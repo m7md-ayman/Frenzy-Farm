@@ -3,10 +3,8 @@
 #include "../Entities/Animal.h"
 #include "../Config/GameConfig.h"
 #include <random>
-#include <limits>
 #include <string>
 
-// Ranges for generating random locations in the play area.
 const int range_min_x = 50;
 const int range_max_x = config.windWidth - 50;
 const int range_min_y = (config.toolBarHeight * 2) + 50;
@@ -28,29 +26,30 @@ public:
 	virtual void onClick();
 };
 
-class CowIcon : public BudgetbarIcon
+class WaterIcon : public BudgetbarIcon
 {
 public:
-	CowIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path);
+	WaterIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path);
+	void draw() const override;
 	virtual void onClick();
 };
 
-enum ANIMAL_ICONS
+enum BUDGET_ICONS
 {
-	ICON_CHICK,
-	ICON_COW,
-	ANIMAL_COUNT
+	BICON_CHICK,
+	BICON_WATER,
+	BUDGET_ICON_COUNT
 };
 
 class Budgetbar : public Drawable
 {
 private:
 	BudgetbarIcon** iconsList;
-	string iconsImages[ANIMAL_COUNT];
+	string iconsImages[BUDGET_ICON_COUNT];
 
 public:
 	Budgetbar(Game* r_pGame, point r_point, int r_width, int r_height);
 	~Budgetbar();
-	void draw() const override;		// FEATURE 2: this now also draws budget/costs text
+	void draw() const override;
 	bool handleClick(int x, int y);
 };

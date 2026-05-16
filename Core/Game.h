@@ -3,7 +3,10 @@
 #include "../UI/Toolbar.h"
 #include "../UI/BudgetBar.h"
 #include "../Entities/Animal.h"
+#include "../Entities/FoodArea.h"
 #include "../Product.h"
+#include <string>
+#include <fstream>
 
 class Game
 {
@@ -14,7 +17,7 @@ private:
 
 	int timerSeconds;
 	int currentLevel;
-	int goalAnimals;
+	int goalBudget;
 	int animalCount;
 	Animal** animals;
 	int animalCapacity;
@@ -23,8 +26,16 @@ private:
 	int productCount;
 	int productCapacity;
 
+	FoodArea** foodAreas;
+	int foodCount;
+	int foodCapacity;
+
+	bool isPaused;
+	int frameCount;
+	int secondsSinceWolfSpawn;
+
 public:
-	int budget = 2000;
+	int budget;
 	Wolf* myWolf;
 	Chicken* myChicken;
 	Warehouse* myWarehouse;
@@ -40,15 +51,47 @@ public:
 	void clearBudget() const;
 	void printBudget(string msg) const;
 	void clearStatusBar() const;
-
 	void drawStatusBar() const;
-
+	void drawFieldBoundaries() const;
 	void printMessage(string msg) const;
 	void go();
 	void go() const;
 
 	void addAnimal(Animal* a);
 	void addProduct(Product* p);
+	void addFoodArea(FoodArea* f);
+	void removeAnimal(int index);
+	void removeProduct(int index);
+	void removeFoodArea(int index);
+	void removeDepletedFoodAreas();
 
 	window* getWind() const;
+
+	void pauseGame();
+	void resumeGame();
+	void restartGame();
+
+	void saveGame(string filename);
+	void loadGame(string filename);
+
+	void checkWolfCollisions();
+	void checkFoodCollisions();
+	void updateWolfSpawns();
+	void spawnProductAtAnimal(Animal* a, bool isEgg);
+
+	void checkLevelUp();
+	int getGoalBudgetForLevel(int level) const;
+	int getTimeForLevel(int level) const;
+
+	void checkChickGrowth();
+	void handlePlayingAreaClick(int x, int y);
+	void handleProductClick(int x, int y);
+	void handleWolfClick(int x, int y);
+
+	void showWinScreen();
+	void showGameOverScreen();
+
+	int getAnimalCount() const { return animalCount; }
+	int getCurrentLevel() const { return currentLevel; }
+	bool getIsPaused() const { return isPaused; }
 };

@@ -1,4 +1,5 @@
-#include "Budgetbar.h"
+#include "BudgetBar.h"
+#include "../Entities/FoodArea.h"
 #include "../Config/GameConfig.h"
 #include "../Core/Game.h"
 #include <iostream>
@@ -25,11 +26,10 @@ ChickIcon::ChickIcon(Game* r_pGame, point r_point, int r_width, int r_height, st
 // FEATURE 2: onClick now uses Game's addAnimal and updates budget
 void ChickIcon::onClick()
 {
-	const int CHICK_COST = 100;
-	if (pGame->budget >= CHICK_COST)
+	if (pGame->budget >= config.chickCost)
 	{
 		// Deduct money
-		pGame->budget -= CHICK_COST;
+		pGame->budget -= config.chickCost;
 
 		// Create a random position in playing area
 		point p;
@@ -40,9 +40,9 @@ void ChickIcon::onClick()
 		p.x = distX(gen);
 		p.y = distY(gen);
 
-		// Create a chicken and add to game
-		Chick* newChick = new Chick(pGame, p, 50, 50, image_path);
-		pGame->addAnimal(newChick);		// FEATURE 10: this method now exists
+		// Spawn drawn chicken (not chick photo)
+		Chicken* newChicken = new Chicken(pGame, p, 55, 60);
+		pGame->addAnimal(newChicken);
 
 		// Redraw budget bar (the budget text will update)
 		pGame->clearBudget();
@@ -51,52 +51,63 @@ void ChickIcon::onClick()
 	}
 }
 
-CowIcon::CowIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
+WaterIcon::WaterIcon(Game* r_pGame, point r_point, int r_width, int r_height, string img_path)
 	: BudgetbarIcon(r_pGame, r_point, r_width, r_height, img_path)
 {
 }
 
-void CowIcon::onClick()
+void WaterIcon::draw() const
 {
-	const int COW_COST = 100;
-	if (pGame->budget >= COW_COST)
-	{
-		pGame->budget -= COW_COST;
+	window* pWind = pGame->getWind();
+	pWind->SetPen(BLUE, 2);
+	pWind->SetBrush(LIGHTBLUE);
+	pWind->DrawRectangle(RefPoint.x, RefPoint.y, RefPoint.x + width, RefPoint.y + height);
+	pWind->SetPen(BLACK, 1);
+	pWind->SetFont(14, BOLD, SWISS, "Arial");
+	pWind->DrawString(RefPoint.x + 12, RefPoint.y + 15, "H2O");
+}
 
-		point p;
-		random_device rd;
-		mt19937 gen(rd());
-		uniform_int_distribution<int> distX(range_min_x, range_max_x);
-		uniform_int_distribution<int> distY(range_min_y, range_max_y);
-		p.x = distX(gen);
-		p.y = distY(gen);
+void WaterIcon::onClick()
+{
+	if (pGame->budget < config.waterCost)
+		return;
 
-		Cow* newCow = new Cow(pGame, p, 50, 50, image_path);
-		pGame->addAnimal(newCow);
+	pGame->budget -= config.waterCost;
 
-		pGame->clearBudget();
-		string budgetStr = "BUDGET = $" + to_string(pGame->budget);
-		pGame->printBudget(budgetStr);
-	}
+	random_device rd;
+	mt19937 gen(rd());
+	uniform_int_distribution<int> distX(range_min_x, range_max_x);
+	uniform_int_distribution<int> distY(range_min_y, range_max_y);
+
+	point p;
+	p.x = distX(gen);
+	p.y = distY(gen);
+
+	FoodArea* grass = new FoodArea(pGame, p, config.foodAreaWidth, config.foodAreaHeight,
+		config.foodAreaInitialCounter);
+	pGame->addFoodArea(grass);
+
+	pGame->clearBudget();
+	pGame->printBudget("BUDGET = $" + to_string(pGame->budget));
 }
 
 // ---------- Budgetbar ----------
 Budgetbar::Budgetbar(Game* r_pGame, point r_point, int r_width, int r_height)
 	: Drawable(r_pGame, r_point, r_width, r_height)
 {
-	iconsImages[ICON_CHICK] = "images\\chick.jpg";
-	iconsImages[ICON_COW] = "images\\cow.jpg";
+	iconsImages[BICON_CHICK] = "images\\chick.jpg";
+	iconsImages[BICON_WATER] = "images\\chick.jpg";
 	point p; p.x = 0; p.y = config.toolBarHeight;
 
-	iconsList = new BudgetbarIcon * [ANIMAL_COUNT];
-	iconsList[ICON_CHICK] = new ChickIcon(pGame, p, config.iconWidth, config.toolBarHeight, iconsImages[ICON_CHICK]);
+	iconsList = new BudgetbarIcon * [BUDGET_ICON_COUNT];
+	iconsList[BICON_CHICK] = new ChickIcon(pGame, p, config.iconWidth, config.toolBarHeight, iconsImages[BICON_CHICK]);
 	p.x += config.iconWidth;
-	iconsList[ICON_COW] = new CowIcon(pGame, p, config.iconWidth, config.toolBarHeight, iconsImages[ICON_COW]);
+	iconsList[BICON_WATER] = new WaterIcon(pGame, p, config.iconWidth, config.toolBarHeight, iconsImages[BICON_WATER]);
 }
 
 Budgetbar::~Budgetbar()
 {
-	for (int i = 0; i < ANIMAL_COUNT; i++)
+	for (int i = 0; i < BUDGET_ICON_COUNT; i++)
 		delete iconsList[i];
 	delete[] iconsList;
 }
@@ -104,21 +115,21 @@ Budgetbar::~Budgetbar()
 void Budgetbar::draw() const
 {
 	// Draw the icons
-	for (int i = 0; i < ANIMAL_COUNT; i++)
+	for (int i = 0; i < BUDGET_ICON_COUNT; i++)
 		iconsList[i]->draw();
 
 	window* pWind = pGame->getWind();
 
 	pWind->SetPen(config.bkGrndColor, 1);
 	pWind->SetBrush(config.bkGrndColor);
-	pWind->DrawRectangle(ANIMAL_COUNT * config.iconWidth, config.toolBarHeight,
+	pWind->DrawRectangle(BUDGET_ICON_COUNT * config.iconWidth, config.toolBarHeight,
 		pWind->GetWidth(), 2 * config.toolBarHeight);
 
 	// ========== FEATURE 2: Draw budget/cost text ==========
 	pWind->SetPen(BLACK, 1);
 	pWind->SetFont(18, PLAIN, SWISS, "Arial");
 
-	int textX = ANIMAL_COUNT * config.iconWidth + 50;
+	int textX = BUDGET_ICON_COUNT * config.iconWidth + 20;
 	int textY = config.toolBarHeight + 10;
 
 	// Budget
@@ -127,7 +138,9 @@ void Budgetbar::draw() const
 
 	// Costs
 	int costX = textX + 200;
-	pWind->DrawString(costX, textY, "Chicken: $100   Cow: $100");
+	pWind->DrawString(costX, textY,
+		"Chick: $" + to_string(config.chickCost) +
+		"  Water: $" + to_string(config.waterCost));
 	// =====================================================
 
 	// Draw separator line
@@ -137,7 +150,7 @@ void Budgetbar::draw() const
 
 bool Budgetbar::handleClick(int x, int y)
 {
-	if (x > ANIMAL_COUNT * config.iconWidth)
+	if (x > BUDGET_ICON_COUNT * config.iconWidth)
 		return false;
 
 	int clickedIconIndex = x / config.iconWidth;
